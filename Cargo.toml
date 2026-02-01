@@ -1,0 +1,13 @@
+[package]
+name = "brick_1"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+axum = "0.8.8"
+tokio = { version = "1.49.0", features = ["full"] }
+tokio-rusqlite = "0.6.0"
+rusqlite = { version = "0.32.1", features = ["bundled"] }
+uuid = { version = "1.13.1", features = ["v4"] }
+serde = { version = "1.0", features = ["derive"] }
+html-escape = "0.2.13"
