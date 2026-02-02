@@ -18,7 +18,8 @@ struct AppState {
 
 #[tokio::main]
 async fn main() {
-    let conn = Connection::open("snap.db")
+    std::fs::create_dir_all("data").expect("Failed to create data directory");
+    let conn = Connection::open("data/snap.db")
         .await
         .expect("Failed to open database");
 
@@ -44,9 +45,7 @@ async fn main() {
         .route("/snap/{id}", get(snap_get_handler))
         .with_state(state);
 
-    let listener = tokio::net::TcpListener::bind("127.0.0.1:3000")
-        .await
-        .unwrap();
+    let listener = tokio::net::TcpListener::bind("0.0.0.0:3000").await.unwrap();
 
     println!("listening on {}", listener.local_addr().unwrap());
     axum::serve(listener, app).await.unwrap();
