@@ -43,12 +43,25 @@ async fn main() {
         .route("/", get(handler))
         .route("/snap", post(snap_post_handler))
         .route("/snap/{id}", get(snap_get_handler))
+        .route("/style.css", get(style_handler))
         .with_state(state);
 
     let listener = tokio::net::TcpListener::bind("0.0.0.0:3000").await.unwrap();
 
     println!("listening on {}", listener.local_addr().unwrap());
     axum::serve(listener, app).await.unwrap();
+}
+
+async fn style_handler() -> impl IntoResponse {
+    match tokio::fs::read_to_string("assets/style.css").await {
+        Ok(css) => (
+            StatusCode::OK,
+            [(axum::http::header::CONTENT_TYPE, "text/css")],
+            css,
+        )
+            .into_response(),
+        Err(_) => (StatusCode::NOT_FOUND, "Not Found").into_response(),
+    }
 }
 
 async fn handler() -> impl IntoResponse {
