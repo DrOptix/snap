@@ -8,11 +8,6 @@
 </head>
 <body>
     <h1>snap</h1>
-    <h1>New HTML Content</h1>
-    <form action="/snap" method="post">
-        <textarea name="content" rows="20" cols="80"></textarea>
-        <br />
-        <button>Create snapshot</button>
-    </form>
+    {% block content %}{% endblock %}
 </body>
 </html>
