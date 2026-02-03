@@ -1,3 +1,4 @@
+use askama::Template;
 use axum::{
     Router,
     extract::{Form, Path, State},
@@ -14,6 +15,16 @@ use uuid::Uuid;
 #[derive(Clone)]
 struct AppState {
     db: Arc<Connection>,
+}
+
+#[derive(Template)]
+#[template(path = "new.html")]
+struct NewSnapTemplate;
+
+#[derive(Template)]
+#[template(path = "view.html")]
+struct ViewSnapTemplate {
+    content: String,
 }
 
 #[tokio::main]
@@ -43,6 +54,7 @@ async fn main() {
         .route("/", get(handler))
         .route("/snap", post(snap_post_handler))
         .route("/snap/{id}", get(snap_get_handler))
+        .route("/style.css", get(style_handler))
         .with_state(state);
 
     let listener = tokio::net::TcpListener::bind("0.0.0.0:3000").await.unwrap();
@@ -51,16 +63,23 @@ async fn main() {
     axum::serve(listener, app).await.unwrap();
 }
 
+async fn style_handler() -> impl IntoResponse {
+    match tokio::fs::read_to_string("assets/style.css").await {
+        Ok(css) => (
+            StatusCode::OK,
+            [(axum::http::header::CONTENT_TYPE, "text/css")],
+            css,
+        )
+            .into_response(),
+        Err(_) => (StatusCode::NOT_FOUND, "Not Found").into_response(),
+    }
+}
+
 async fn handler() -> impl IntoResponse {
-    match tokio::fs::read_to_string("./html/index.html").await {
+    let template = NewSnapTemplate;
+    match template.render() {
         Ok(html) => (StatusCode::OK, Html(html)).into_response(),
-        Err(err) => {
-            if err.kind() == std::io::ErrorKind::NotFound {
-                (StatusCode::NOT_FOUND, "Not Found").into_response()
-            } else {
-                (StatusCode::INTERNAL_SERVER_ERROR, "Internal Server Error").into_response()
-            }
-        }
+        Err(_) => (StatusCode::INTERNAL_SERVER_ERROR, "Internal Server Error").into_response(),
     }
 }
 
@@ -114,14 +133,15 @@ async fn snap_get_handler(
         .await;
 
     match result {
-        Ok(content) => match tokio::fs::read_to_string("./html/snap.html").await {
-            Ok(template) => {
-                let escaped_html = html_escape::encode_safe(&content);
-                let html = template.replace("{{ content }}", &escaped_html);
-                (StatusCode::OK, Html(html)).into_response()
+        Ok(content) => {
+            let template = ViewSnapTemplate { content };
+            match template.render() {
+                Ok(html) => (StatusCode::OK, Html(html)).into_response(),
+                Err(_) => {
+                    (StatusCode::INTERNAL_SERVER_ERROR, "Internal Server Error").into_response()
+                }
             }
-            Err(_) => (StatusCode::INTERNAL_SERVER_ERROR, "Internal Server Error").into_response(),
-        },
+        }
         Err(_) => (StatusCode::NOT_FOUND, "Snap not found").into_response(),
     }
 }
